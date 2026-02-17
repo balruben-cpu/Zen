@@ -53,6 +53,14 @@ window.changePack = () => {
 
 // --- GitHub API ---
 
+// Helper for UTF-8 Base64 decoding
+function b64DecodeUnicode(str) {
+    // Going backwards: from bytestream, to percent-encoding, to original string.
+    return decodeURIComponent(atob(str).split('').map(function (c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+}
+
 async function fetchManifest() {
     if (!currentToken) return;
 
@@ -70,7 +78,7 @@ async function fetchManifest() {
         }
 
         const data = await response.json();
-        const content = atob(data.content.replace(/\n/g, ""));
+        const content = b64DecodeUnicode(data.content.replace(/\n/g, ""));
         const manifest = JSON.parse(content);
 
         populatePackSelect(manifest.Packs || ["pack_1.json"]);
@@ -120,13 +128,12 @@ async function fetchPack() {
         const data = await response.json();
         packSha = data.sha;
 
-        // Decode Content (Base64)
-        // Note: content can have newlines
+        // Decode Content (Base64) - UTF-8 Safe
         const cleanContent = data.content.replace(/\n/g, "");
-        const jsonString = atob(cleanContent);
+        const jsonString = b64DecodeUnicode(cleanContent);
 
         // Parse
-        // The file might be a bare array or wrapped object. 
+        // The file might be a bare array or wrapped object.
         // ZenLevelPolisher.cs handles both. Let's assume bare array for now but check.
         // Wait, ZenLevelPolisher logic: if (json[0] != '{') json = "{\"Levels\":" + json + "}";
         // So strict JSON might be `[...]`.
