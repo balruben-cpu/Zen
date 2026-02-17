@@ -1,7 +1,7 @@
 const GITHUB_USER = "balruben-cpu";
 const GITHUB_REPO = "Zen_Data";
 const GITHUB_BRANCH = "main";
-const LANG = "en"; // Hardcoded for now, can be selectable later
+let LANG = localStorage.getItem("ZenPolisherLang") || "en";
 
 // State
 let currentToken = localStorage.getItem("ZenGithubToken") || "";
@@ -16,12 +16,15 @@ const elCategory = document.getElementById("category");
 const elSubcategory = document.getElementById("subcategory");
 const elWordsContainer = document.getElementById("words-container");
 const elToken = document.getElementById("github-token");
+const elLang = document.getElementById("lang-select");
 const elApp = document.getElementById("app");
 const elLoading = document.getElementById("loading");
 
 // Init
 function init() {
     elToken.value = currentToken;
+    elLang.value = LANG;
+
     if (currentToken) {
         // Attempt to load
         fetchPack();
@@ -32,6 +35,15 @@ function init() {
     // Bind Inputs used for navigation
     elLevelId.addEventListener('change', (e) => jumpToLevel(parseInt(e.target.value)));
 }
+
+window.changeLang = () => {
+    LANG = elLang.value;
+    localStorage.setItem("ZenPolisherLang", LANG);
+    // Reset data
+    currentPack = { Levels: [] };
+    renderLevel(); // Clear UI
+    if (currentToken) fetchPack();
+};
 
 // --- GitHub API ---
 

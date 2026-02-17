@@ -1,19 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zen Level Polisher</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-    <div id="loading" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:999; justify-content:center; align-items:center; color:white; font-size:2rem;">
+    <div id="loading"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:999; justify-content:center; align-items:center; color:white; font-size:2rem;">
         Loading...
     </div>
 
     <div id="app">
         <header>
             <h1>Zen Polisher (Web)</h1>
+            <select id="lang-select" onchange="changeLang()"
+                style="background:#333; color:#fff; padding:5px; border:1px solid #555; border-radius:4px;">
+                <option value="en">English (EN)</option>
+                <option value="es">Spanish (ES)</option>
+                <option value="fr">French (FR)</option>
+                <option value="de">German (DE)</option>
+                <option value="it">Italian (IT)</option>
+                <option value="pt">Portuguese (PT)</option>
+                <option value="ru">Russian (RU)</option>
+                <option value="tr">Turkish (TR)</option>
+                <option value="ja">Japanese (JA)</option>
+                <option value="ko">Korean (KO)</option>
+                <option value="zh">Chinese (ZH)</option>
+                <option value="hy">Armenian (HY)</option>
+            </select>
             <div id="status-bar">Ready</div>
         </header>
 
@@ -21,7 +39,7 @@
         <div class="controls">
             <button onclick="navLevel(-10)">&lt;&lt;</button>
             <button onclick="navLevel(-1)">&lt;</button>
-            
+
             <div style="display:flex; align-items:center; gap:5px;">
                 <span>Level:</span>
                 <input type="number" id="level-id" value="1" style="width:60px; text-align:center;">
@@ -69,4 +87,5 @@
 
     <script src="app.js"></script>
 </body>
+
 </html>
