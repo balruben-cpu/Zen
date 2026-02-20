@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zen Notifier - Remote Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --primary: #38bdf8;
+            --text: #f8fafc;
+            --accent: #f472b6;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-weight: 600;
+            letter-spacing: -1px;
+            margin: 0;
+        }
+
+        .config-panel {
+            background: var(--card);
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .token-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input,
+        textarea,
+        select {
+            background: #334155;
+            border: 1px solid #475569;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: #0f172a;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+
+        .btn.secondary {
+            background: #475569;
+            color: white;
+        }
+
+        .btn.save {
+            background: #22c55e;
+            color: #064e3b;
+        }
+
+        .notification-card {
+            background: #334155;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--primary);
+            position: relative;
+        }
+
+        .lang-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .lang-box {
+            background: #1e293b;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .lang-box label {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+            min-height: 1.5em;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .field {
+            flex: 1;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>ZEN NOTIFIER</h1>
+            <p>Live Remote Retention Manager</p>
+        </header>
+
+        <div class="config-panel">
+            <label>GitHub Access Token</label>
+            <div class="token-row">
+                <input type="password" id="ghToken" class="field" placeholder="ghp_xxxxxxxxxxxx">
+                <button class="btn" onclick="loadFromGithub()">Load From Cloud</button>
+                <button class="btn save" onclick="saveToGithub()">Save & Publish</button>
+            </div>
+            <p id="syncStatus" class="status"></p>
+        </div>
+
+        <div id="notificationsList">
+            <!-- Notification Cards will appear here -->
+        </div>
+
+        <div style="text-align: center;">
+            <button class="btn secondary" onclick="addNewEntry()">+ Add New Template</button>
+        </div>
+    </div>
+
+    <script>
+        const GITHUB_USER = "balruben-cpu";
+        const GITHUB_REPO = "Zen_Data";
+        const GITHUB_PATH = "config/notifications.json";
+
+        let currentConfig = { entries: [] };
+        let currentSha = "";
+
+        async function loadFromGithub() {
+            const token = document.getElementById('ghToken').value;
+            if (!token) return alert("Please enter your GitHub token.");
+
+            setStatus("Fetching current config...");
+
+            try {
+                const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`, {
+                    headers: { 'Authorization': `token ${token}` }
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    currentSha = data.sha;
+                    const content = atob(data.content);
+                    currentConfig = JSON.parse(content);
+                    renderUI();
+                    setStatus("Config loaded successfully.", "#22c55e");
+                } else {
+                    setStatus("Failed to load. Repo or file might not exist yet.", "#ef4444");
+                }
+            } catch (e) {
+                setStatus("Error connecting to GitHub.", "#ef4444");
+            }
+        }
+
+        async function saveToGithub() {
+            const token = document.getElementById('ghToken').value;
+            if (!token) return alert("Token required to publish.");
+
+            updateConfigFromUI();
+            setStatus("Publishing to GitHub...");
+
+            try {
+                const body = {
+                    message: "Update Notifications via ZenNotifier Web Tool",
+                    content: btoa(unescape(encodeURIComponent(JSON.stringify(currentConfig, null, 2)))),
+                    sha: currentSha
+                };
+
+                const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    currentSha = data.content.sha;
+                    setStatus("PUBLISHED! The game will update on next launch.", "#22c55e");
+                } else {
+                    setStatus("Failed to publish. Check token permissions.", "#ef4444");
+                }
+            } catch (e) {
+                setStatus("Network error during publish.", "#ef4444");
+            }
+        }
+
+        function renderUI() {
+            const list = document.getElementById('notificationsList');
+            list.innerHTML = "";
+
+            currentConfig.entries.forEach((entry, index) => {
+                const card = document.createElement('div');
+                card.className = "notification-card";
+                card.innerHTML = `
+                <span class="delete-btn" onclick="removeEntry(${index})">×</span>
+                <div class="row">
+                    <div class="field">
+                        <label>Entry ID</label>
+                        <input type="text" class="full-field" value="${entry.id}" onchange="updateEntry(${index}, 'id', this.value)">
+                    </div>
+                    <div class="field" style="max-width: 80px;">
+                        <label>Delay (h)</label>
+                        <input type="number" value="${entry.delayHours}" onchange="updateEntry(${index}, 'delayHours', parseInt(this.value))">
+                    </div>
+                    <div class="field" style="max-width: 80px;">
+                        <label>Priority</label>
+                        <input type="number" value="${entry.priority || 10}" onchange="updateEntry(${index}, 'priority', parseInt(this.value))">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="field">
+                        <label>Min Level</label>
+                        <input type="number" value="${entry.minLevel}" onchange="updateEntry(${index}, 'minLevel', parseInt(this.value))">
+                    </div>
+                    <div class="field">
+                        <label>Max Level</label>
+                        <input type="number" value="${entry.maxLevel}" onchange="updateEntry(${index}, 'maxLevel', parseInt(this.value))">
+                    </div>
+                </div>
+
+                <div class="lang-grid">
+                    ${['en', 'es', 'hy', 'ru', 'pt'].map(lang => `
+                        <div class="lang-box">
+                            <label>${lang}</label>
+                            <input type="text" placeholder="Title" value="${entry.titles[lang] || ''}" id="t_${index}_${lang}">
+                            <input type="text" placeholder="Message" value="${entry.messages[lang] || ''}" id="m_${index}_${lang}" style="margin-top:5px;">
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+                list.appendChild(card);
+            });
+        }
+
+        function addNewEntry() {
+            currentConfig.entries.push({
+                id: "new_notification",
+                delayHours: 24,
+                minLevel: 0,
+                maxLevel: 9999,
+                priority: 10,
+                titles: { en: "Your Zen Awaits" },
+                messages: { en: "A new path is ready." }
+            });
+            renderUI();
+        }
+
+        function removeEntry(index) {
+            currentConfig.entries.splice(index, 1);
+            renderUI();
+        }
+
+        function updateEntry(index, key, val) {
+            currentConfig.entries[index][key] = val;
+        }
+
+        function updateConfigFromUI() {
+            currentConfig.entries.forEach((entry, index) => {
+                ['en', 'es', 'hy', 'ru', 'pt'].forEach(lang => {
+                    entry.titles[lang] = document.getElementById(`t_${index}_${lang}`).value;
+                    entry.messages[lang] = document.getElementById(`m_${index}_${lang}`).value;
+                });
+            });
+        }
+
+        function setStatus(msg, color = "#f8fafc") {
+            const s = document.getElementById('syncStatus');
+            s.innerText = msg;
+            s.style.color = color;
+        }
+
+        // Auto-fill token if in localStorage (Optional convenience)
+        window.onload = () => {
+            const saved = localStorage.getItem('zen_notifier_token');
+            if (saved) document.getElementById('ghToken').value = saved;
+        }
+        document.getElementById('ghToken').onchange = (e) => localStorage.setItem('zen_notifier_token', e.target.value);
+
+    </script>
+
+</body>
+
+</html>
