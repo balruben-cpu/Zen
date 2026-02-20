@@ -303,6 +303,10 @@
                         <label>Priority</label>
                         <input type="number" value="${entry.priority || 10}" onchange="updateEntry(${index}, 'priority', parseInt(this.value))">
                     </div>
+                    <div class="field">
+                        <label>DeepLink</label>
+                        <input type="text" value="${entry.deeplink || ''}" placeholder="e.g. shop" onchange="updateEntry(${index}, 'deeplink', this.value)">
+                    </div>
                 </div>
                 <div class="row">
                     <div class="field">
@@ -336,6 +340,7 @@
                 minLevel: 0,
                 maxLevel: 9999,
                 priority: 10,
+                deeplink: "",
                 titles: { en: "Your Zen Awaits" },
                 messages: { en: "A new path is ready." }
             });
