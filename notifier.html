@@ -184,6 +184,17 @@
             <p id="syncStatus" class="status"></p>
         </div>
 
+        <div class="config-panel" style="background: #1e293b; border-left: 4px solid var(--accent); font-size: 13px;">
+            <p><strong>🚀 How to Test on Mobile:</strong></p>
+            <ol>
+                <li>Set <strong>Delay (h)</strong> to <code>0.01</code> (about 30 seconds).</li>
+                <li>Click <strong>Save & Publish</strong>.</li>
+                <li>Open the game on your phone while connected to the internet.</li>
+                <li>Wait 5 seconds, then <strong>Close/Kill</strong> the app.</li>
+                <li>Wait 30 seconds and your notification will arrive!</li>
+            </ol>
+        </div>
+
         <div id="notificationsList">
             <!-- Notification Cards will appear here -->
         </div>
@@ -215,7 +226,12 @@
 
                 if (res.ok) {
                     currentSha = data.sha;
-                    const content = atob(data.content);
+                    // Proper UTF-8 Decoding from Base64
+                    const binary = atob(data.content.replace(/\s/g, ''));
+                    const bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                    const content = new TextDecoder().decode(bytes);
+
                     currentConfig = JSON.parse(content);
                     renderUI();
                     setStatus("Config loaded successfully.", "#22c55e");
@@ -235,9 +251,15 @@
             setStatus("Publishing to GitHub...");
 
             try {
+                // Proper UTF-8 Encoding to Base64
+                const contentStr = JSON.stringify(currentConfig, null, 2);
+                const bytes = new TextEncoder().encode(contentStr);
+                const binary = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+                const base64 = btoa(binary);
+
                 const body = {
                     message: "Update Notifications via ZenNotifier Web Tool",
-                    content: btoa(unescape(encodeURIComponent(JSON.stringify(currentConfig, null, 2)))),
+                    content: base64,
                     sha: currentSha
                 };
 
