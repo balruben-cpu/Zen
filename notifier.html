@@ -511,6 +511,7 @@
                     if (!contentManifest.music) contentManifest.music = [];
                     if (!contentManifest.backgrounds) contentManifest.backgrounds = [];
                     pendingUploads = [];
+                    deletedFiles = []; // CLEAR delete tracking on load
                     renderBackgrounds();
                     setContentStatus("Content manifest loaded.", "#22c55e");
                 } else if (res.status === 404) {
@@ -647,31 +648,41 @@
             try {
                 // 1. Delete removed files from GitHub
                 for (const del of deletedFiles) {
-                    setContentStatus(`Deleting ${del.path}...`);
+                    setContentStatus(`Deleting ${del.name}...`);
                     try {
                         const existRes = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${del.path}`, {
                             headers: { 'Authorization': `token ${token}` }
                         });
+
                         if (existRes.ok) {
                             const existData = await existRes.json();
                             const delBody = {
                                 message: `Delete background file: ${del.name}`,
                                 sha: existData.sha
                             };
-                            await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${del.path}`, {
+                            const delRes = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${del.path}`, {
                                 method: 'DELETE',
                                 headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
                                 body: JSON.stringify(delBody)
                             });
+
+                            if (!delRes.ok) {
+                                console.error(`Failed to delete ${del.name}:`, await delRes.text());
+                                setContentStatus(`Error deleting ${del.name}`, "#ef4444");
+                                return; // Stop if we can't clean up correctly
+                            }
                         }
                     } catch (e) {
-                        console.log("File already gone or error during delete:", del.path);
+                        console.error("Network error during delete:", e);
+                        setContentStatus("Network error during cleanup.", "#ef4444");
+                        return;
                     }
                 }
 
                 // 2. Upload pending image files
                 for (const upload of pendingUploads) {
-                    setContentStatus(`Uploading ${upload.path}...`);
+                    const bgTitle = contentManifest.backgrounds[upload.index]?.name || "background";
+                    setContentStatus(`Uploading ${bgTitle}...`);
                     const base64Data = upload.dataUrl.split(',')[1]; // Remove data:image/... prefix
 
                     // Check if file already exists (get SHA)
