@@ -318,7 +318,8 @@
         // Content Manager State
         let contentManifest = { music: [], backgrounds: [] };
         let contentManifestSha = "";
-        let pendingUploads = []; // { index, file, path } for images to upload
+        let pendingUploads = []; // { index, file, path, dataUrl }
+        let deletedFiles = [];  // { name, path } - Tracks files for GitHub cleanup
 
         async function loadFromGithub() {
             const token = document.getElementById('ghToken').value;
@@ -538,8 +539,28 @@
         }
 
         function removeBackground(index) {
+            const bg = contentManifest.backgrounds[index];
+            if (!bg) return;
+
+            // Confirm if it's an existing file
+            if (bg.file && !confirm(`Delete "${bg.name}" and its file from GitHub?`)) return;
+
+            // Track for deletion from GitHub later
+            if (bg.file) {
+                deletedFiles.push({ name: bg.name, path: bg.file });
+            }
+
+            // Remove from manifest
             contentManifest.backgrounds.splice(index, 1);
+
+            // Re-index pending uploads
+            // 1. Remove pending for the deleted index
             pendingUploads = pendingUploads.filter(u => u.index !== index);
+            // 2. Decrement indices for all subsequent pendings
+            pendingUploads.forEach(u => {
+                if (u.index > index) u.index--;
+            });
+
             renderBackgrounds();
         }
 
@@ -624,7 +645,31 @@
             setContentStatus("Publishing content...");
 
             try {
-                // 1. Upload pending image files
+                // 1. Delete removed files from GitHub
+                for (const del of deletedFiles) {
+                    setContentStatus(`Deleting ${del.path}...`);
+                    try {
+                        const existRes = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${del.path}`, {
+                            headers: { 'Authorization': `token ${token}` }
+                        });
+                        if (existRes.ok) {
+                            const existData = await existRes.json();
+                            const delBody = {
+                                message: `Delete background file: ${del.name}`,
+                                sha: existData.sha
+                            };
+                            await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${del.path}`, {
+                                method: 'DELETE',
+                                headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                                body: JSON.stringify(delBody)
+                            });
+                        }
+                    } catch (e) {
+                        console.log("File already gone or error during delete:", del.path);
+                    }
+                }
+
+                // 2. Upload pending image files
                 for (const upload of pendingUploads) {
                     setContentStatus(`Uploading ${upload.path}...`);
                     const base64Data = upload.dataUrl.split(',')[1]; // Remove data:image/... prefix
@@ -682,6 +727,7 @@
                     const data = await res.json();
                     contentManifestSha = data.content.sha;
                     pendingUploads = [];
+                    deletedFiles = [];
                     setContentStatus("✅ Content published! Players will see it on next launch.", "#22c55e");
                 } else {
                     setContentStatus("Failed to publish manifest.", "#ef4444");
