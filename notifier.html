@@ -163,6 +163,88 @@
             margin-bottom: 4px;
             display: block;
         }
+
+        /* --- Content Manager Styles --- */
+        .section-divider {
+            text-align: center;
+            margin: 40px 0 20px;
+            padding: 15px;
+            border-top: 2px solid #334155;
+        }
+
+        .section-divider h2 {
+            color: var(--accent);
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            margin: 0;
+        }
+
+        .section-divider p {
+            color: #94a3b8;
+            font-size: 13px;
+            margin: 5px 0 0;
+        }
+
+        .content-card {
+            background: #334155;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--accent);
+            position: relative;
+        }
+
+        .content-preview {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .content-preview img {
+            width: 120px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #475569;
+        }
+
+        .content-preview .placeholder-img {
+            width: 120px;
+            height: 80px;
+            background: #1e293b;
+            border-radius: 8px;
+            border: 2px dashed #475569;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            color: #475569;
+            cursor: pointer;
+        }
+
+        .color-swatch {
+            display: inline-block;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: 2px solid #475569;
+            vertical-align: middle;
+            cursor: pointer;
+        }
+
+        .content-fields {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .content-status {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+            min-height: 1.5em;
+        }
     </style>
 </head>
 
@@ -202,15 +284,41 @@
         <div style="text-align: center;">
             <button class="btn secondary" onclick="addNewEntry()">+ Add New Template</button>
         </div>
+
+        <!-- ═══════════════════ CONTENT MANAGER ═══════════════════ -->
+        <div class="section-divider">
+            <h2>🎨 CONTENT MANAGER</h2>
+            <p>Upload backgrounds & music that appear in-game via OTA</p>
+        </div>
+
+        <div class="config-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <label style="font-size: 16px; margin: 0;">Backgrounds</label>
+                <button class="btn secondary" onclick="addNewBackground()" style="padding: 6px 14px; font-size: 13px;">+
+                    Add Background</button>
+            </div>
+            <div id="backgroundsList"></div>
+            <p id="contentStatus" class="content-status"></p>
+            <div style="text-align: center; margin-top: 15px;">
+                <button class="btn" onclick="loadContentManifest()">Load Content</button>
+                <button class="btn save" onclick="publishContent()">Publish Content</button>
+            </div>
+        </div>
     </div>
 
     <script>
         const GITHUB_USER = "balruben-cpu";
         const GITHUB_REPO = "Zen_Data";
         const GITHUB_PATH = "config/notifications.json";
+        const CONTENT_MANIFEST_PATH = "content/content_manifest.json";
 
         let currentConfig = { entries: [] };
         let currentSha = "";
+
+        // Content Manager State
+        let contentManifest = { music: [], backgrounds: [] };
+        let contentManifestSha = "";
+        let pendingUploads = []; // { index, file, path } for images to upload
 
         async function loadFromGithub() {
             const token = document.getElementById('ghToken').value;
@@ -377,6 +485,216 @@
             if (saved) document.getElementById('ghToken').value = saved;
         }
         document.getElementById('ghToken').onchange = (e) => localStorage.setItem('zen_notifier_token', e.target.value);
+
+        // ═══════════════════ CONTENT MANAGER FUNCTIONS ═══════════════════
+
+        async function loadContentManifest() {
+            const token = document.getElementById('ghToken').value;
+            if (!token) return alert("Please enter your GitHub token.");
+
+            setContentStatus("Loading content manifest...");
+
+            try {
+                const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${CONTENT_MANIFEST_PATH}`, {
+                    headers: { 'Authorization': `token ${token}` }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    contentManifestSha = data.sha;
+                    const binary = atob(data.content.replace(/\s/g, ''));
+                    const bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                    const content = new TextDecoder().decode(bytes);
+                    contentManifest = JSON.parse(content);
+                    if (!contentManifest.music) contentManifest.music = [];
+                    if (!contentManifest.backgrounds) contentManifest.backgrounds = [];
+                    pendingUploads = [];
+                    renderBackgrounds();
+                    setContentStatus("Content manifest loaded.", "#22c55e");
+                } else if (res.status === 404) {
+                    // File doesn't exist yet — start fresh
+                    contentManifest = { music: [], backgrounds: [] };
+                    contentManifestSha = "";
+                    pendingUploads = [];
+                    renderBackgrounds();
+                    setContentStatus("No manifest found. Starting fresh.", "#f59e0b");
+                } else {
+                    setContentStatus("Failed to load manifest.", "#ef4444");
+                }
+            } catch (e) {
+                setContentStatus("Network error.", "#ef4444");
+            }
+        }
+
+        function addNewBackground() {
+            contentManifest.backgrounds.push({
+                name: "New Background",
+                file: "",
+                thumbnail: "",
+                color: "#6366F1"
+            });
+            renderBackgrounds();
+        }
+
+        function removeBackground(index) {
+            contentManifest.backgrounds.splice(index, 1);
+            pendingUploads = pendingUploads.filter(u => u.index !== index);
+            renderBackgrounds();
+        }
+
+        function renderBackgrounds() {
+            const list = document.getElementById('backgroundsList');
+            list.innerHTML = '';
+
+            contentManifest.backgrounds.forEach((bg, index) => {
+                const pending = pendingUploads.find(u => u.index === index);
+                const hasPreview = pending && pending.dataUrl;
+
+                const card = document.createElement('div');
+                card.className = 'content-card';
+                card.innerHTML = `
+                    <span class="delete-btn" onclick="removeBackground(${index})">×</span>
+                    <div class="content-preview">
+                        ${hasPreview
+                        ? `<img src="${pending.dataUrl}" alt="Preview">`
+                        : bg.file
+                            ? `<img src="https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/${bg.file}" alt="${bg.name}">`
+                            : `<div class="placeholder-img" onclick="document.getElementById('bgFile_${index}').click()">🖼️</div>`
+                    }
+                        <div class="content-fields">
+                            <div class="row">
+                                <div class="field">
+                                    <label>Name</label>
+                                    <input type="text" value="${bg.name}" 
+                                        onchange="contentManifest.backgrounds[${index}].name = this.value">
+                                </div>
+                                <div class="field" style="max-width: 80px;">
+                                    <label>Color</label>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <input type="color" value="${bg.color || '#6366F1'}" 
+                                            onchange="contentManifest.backgrounds[${index}].color = this.value; this.nextElementSibling.style.backgroundColor = this.value;"
+                                            style="width: 36px; height: 36px; padding: 0; border: none; cursor: pointer;">
+                                        <div class="color-swatch" style="background-color: ${bg.color || '#6366F1'}"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label>Image File</label>
+                                <input type="file" id="bgFile_${index}" accept="image/png,image/jpeg,image/webp" 
+                                    onchange="handleBgFileSelect(${index}, this)" style="font-size: 12px;">
+                                ${bg.file ? `<span style="color: #94a3b8; font-size: 11px;">${bg.file}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        function handleBgFileSelect(index, input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const ext = file.name.split('.').pop().toLowerCase();
+            const safeName = contentManifest.backgrounds[index].name.replace(/\s+/g, '_').toLowerCase();
+            const remotePath = `content/backgrounds/${safeName}.${ext}`;
+
+            contentManifest.backgrounds[index].file = remotePath;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                // Remove old pending for this index
+                pendingUploads = pendingUploads.filter(u => u.index !== index);
+                pendingUploads.push({
+                    index: index,
+                    file: file,
+                    path: remotePath,
+                    dataUrl: e.target.result
+                });
+                renderBackgrounds();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function publishContent() {
+            const token = document.getElementById('ghToken').value;
+            if (!token) return alert("Token required to publish.");
+
+            setContentStatus("Publishing content...");
+
+            try {
+                // 1. Upload pending image files
+                for (const upload of pendingUploads) {
+                    setContentStatus(`Uploading ${upload.path}...`);
+                    const base64Data = upload.dataUrl.split(',')[1]; // Remove data:image/... prefix
+
+                    // Check if file already exists (get SHA)
+                    let fileSha = "";
+                    try {
+                        const existRes = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${upload.path}`, {
+                            headers: { 'Authorization': `token ${token}` }
+                        });
+                        if (existRes.ok) {
+                            const existData = await existRes.json();
+                            fileSha = existData.sha;
+                        }
+                    } catch (e) { /* file doesn't exist yet */ }
+
+                    const uploadBody = {
+                        message: `Upload background: ${contentManifest.backgrounds[upload.index]?.name || upload.path}`,
+                        content: base64Data
+                    };
+                    if (fileSha) uploadBody.sha = fileSha;
+
+                    const uploadRes = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${upload.path}`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(uploadBody)
+                    });
+
+                    if (!uploadRes.ok) {
+                        setContentStatus(`Failed to upload ${upload.path}`, "#ef4444");
+                        return;
+                    }
+                }
+
+                // 2. Save content manifest
+                setContentStatus("Saving manifest...");
+                const manifestStr = JSON.stringify(contentManifest, null, 2);
+                const bytes = new TextEncoder().encode(manifestStr);
+                const binary = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+                const base64 = btoa(binary);
+
+                const manifestBody = {
+                    message: "Update content manifest via Zen Notifier",
+                    content: base64
+                };
+                if (contentManifestSha) manifestBody.sha = contentManifestSha;
+
+                const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${CONTENT_MANIFEST_PATH}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(manifestBody)
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    contentManifestSha = data.content.sha;
+                    pendingUploads = [];
+                    setContentStatus("✅ Content published! Players will see it on next launch.", "#22c55e");
+                } else {
+                    setContentStatus("Failed to publish manifest.", "#ef4444");
+                }
+            } catch (e) {
+                setContentStatus(`Error: ${e.message}`, "#ef4444");
+            }
+        }
+
+        function setContentStatus(msg, color = "#f8fafc") {
+            const s = document.getElementById('contentStatus');
+            if (s) { s.innerText = msg; s.style.color = color; }
+        }
 
     </script>
 
