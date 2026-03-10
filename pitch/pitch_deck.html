@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riddle Path – Google Play Pitch Deck</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --accent: #d4a843;
+            --text: #e6edf3;
+            --muted: #8b949e;
+            --border: #30363d;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+        }
+
+        .deck {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .slide {
+            display: none;
+            width: 100%;
+            height: 100%;
+            animation: fadeIn .4s ease;
+        }
+
+        .slide.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        .nav {
+            position: fixed;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            z-index: 100;
+        }
+
+        .nav button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 26px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity .2s;
+        }
+
+        .nav button:hover {
+            opacity: .85;
+        }
+
+        .nav button:disabled {
+            opacity: .3;
+            cursor: default;
+        }
+
+        .dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: background .3s;
+            cursor: pointer;
+        }
+
+        .dot.active {
+            background: var(--accent);
+        }
+
+        /* Cover */
+        .slide-cover {
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(145deg, #0d1117 0%, #1b2535 100%);
+            text-align: center;
+            gap: 24px;
+            padding: 40px;
+        }
+
+        .slide-cover img.hero {
+            width: 100%;
+            max-width: 780px;
+            border-radius: 16px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, .6);
+        }
+
+        .slide-cover h1 {
+            font-size: 42px;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: -1px;
+        }
+
+        .slide-cover h2 {
+            font-size: 20px;
+            font-weight: 300;
+            color: var(--muted);
+        }
+
+        .slide-cover .meta {
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.8;
+        }
+
+        .slide-cover .meta a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        /* Split */
+        .slide-split {
+            flex-direction: row;
+        }
+
+        .split-left {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 56px 48px;
+            background: var(--surface);
+            border-right: none;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .split-right {
+            width: 42%;
+            flex-shrink: 0;
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .split-right img {
+            height: 100%;
+            width: 100%;
+            object-fit: contain;
+        }
+
+        .split-left h3 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1.2;
+        }
+
+        .split-left p {
+            font-size: 16px;
+            line-height: 1.7;
+            color: var(--muted);
+        }
+
+        .split-left ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .split-left ul li {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--muted);
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .split-left ul li::before {
+            content: '›';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-size: 18px;
+            line-height: 1.4;
+        }
+
+        .split-left ul li b {
+            color: var(--text);
+        }
+
+        /* Text-only */
+        .slide-text {
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 64px 120px;
+            gap: 28px;
+            background: var(--bg);
+            text-align: center;
+        }
+
+        .slide-text h3 {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .slide-text ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            text-align: left;
+            max-width: 680px;
+        }
+
+        .slide-text ul li {
+            font-size: 16px;
+            line-height: 1.7;
+            color: var(--muted);
+            padding-left: 24px;
+            position: relative;
+        }
+
+        .slide-text ul li::before {
+            content: '›';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-size: 20px;
+            line-height: 1.4;
+        }
+
+        .slide-text ul li b {
+            color: var(--text);
+        }
+
+        .slide-text .closing {
+            font-size: 15px;
+            color: var(--muted);
+            font-style: italic;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="deck">
+
+        <!-- SLIDE 1: Cover -->
+        <div class="slide slide-cover active">
+            <img class="hero"
+                src="feature_graphic.png"
+                alt="Riddle Path Feature Graphic">
+            <h1>Riddle Path</h1>
+            <h2>The Poetic Journey to Enlightenment</h2>
+            <div class="meta">
+                <b>Developer:</b> Chundos Studio &nbsp;|&nbsp; <b>Contact:</b> balruben@gmail.com<br>
+                <b>Package:</b> com.chundos.riddlepath &nbsp;|&nbsp; <a href="#">&#9654; Watch Promo Video</a>
+            </div>
+        </div>
+
+        <!-- SLIDE 2 -->
+        <div class="slide slide-split">
+            <div class="split-left">
+                <h3>What is Riddle Path?</h3>
+                <p><em>Riddle Path</em> is not just a word game — it's a relaxing, poetic journey.</p>
+                <p>Players solve carefully crafted riddles written in a mystical, first-person voice. Each solved puzzle
+                    clears the mist, rewarding the player with stunning, expanding landscapes and a true sense of Zen.
+                </p>
+                <p>It is designed to be a meditative escape from the stress of daily life.</p>
+            </div>
+            <div class="split-right">
+                <img src="ss1.png"
+                    alt="Screenshot 1">
+            </div>
+        </div>
+
+        <!-- SLIDE 3 -->
+        <div class="slide slide-split">
+            <div class="split-left">
+                <h3>Key Features &amp; App Excellence</h3>
+                <ul>
+                    <li><b>Aesthetic &amp; Audio:</b> High-quality misty landscapes with calming, algorithmic music that
+                        reacts to progress.</li>
+                    <li><b>No Clutter:</b> Beautiful gesture-driven UI — no intrusive ads during gameplay.</li>
+                    <li><b>Android Optimized:</b> Target SDK 34, Predictive Back gestures, scales flawlessly on Tablets
+                        &amp; Foldables.</li>
+                    <li><b>Rock-Solid:</b> Crash rate ~0.0%, ANR rate ~0.0% — passing all Android Vitals thresholds.
+                    </li>
+                </ul>
+            </div>
+            <div class="split-right">
+                <img src="ss2.png"
+                    alt="Screenshot 2">
+            </div>
+        </div>
+
+        <!-- SLIDE 4 -->
+        <div class="slide slide-split">
+            <div class="split-left">
+                <h3>Global Appeal &amp; Deep Localization</h3>
+                <p>Riddle Path isn't just translated — it's culturally localized.</p>
+                <ul>
+                    <li><b>Hand-crafted Riddles:</b> English, Spanish, Armenian &amp; Russian — each written natively,
+                        preserving poetic meter (7/7 syllables in Armenian, rhyming couplets in English).</li>
+                    <li><b>UI in 14 Languages:</b> Seamlessly serving a truly global audience.</li>
+                </ul>
+            </div>
+            <div class="split-right">
+                <img src="ss3.png"
+                    alt="Screenshot 3">
+            </div>
+        </div>
+
+        <!-- SLIDE 4b -->
+        <div class="slide slide-split">
+            <div class="split-left">
+                <h3>Relaxing Player Experience</h3>
+                <p>Every detail of <em>Riddle Path</em> is designed to keep players calm, focused, and coming back.</p>
+                <ul>
+                    <li><b>Hint System:</b> Players are never stuck — hints are accessible and earned, not paywalled.
+                    </li>
+                    <li><b>Progression:</b> Levels unlock gradually, pacing the player through a satisfying journey.
+                    </li>
+                    <li><b>No Time Pressure:</b> Solve at your own pace — completely stress-free.</li>
+                </ul>
+            </div>
+            <div class="split-right">
+                <img src="ss4.png"
+                    alt="Screenshot 4">
+            </div>
+        </div>
+
+        <!-- SLIDE 5 -->
+        <div class="slide slide-text">
+            <h3>Player-Friendly Monetization</h3>
+            <ul>
+                <li><b>Smart Ads:</b> AdMob with strictly limited frequency. No banners during gameplay.</li>
+                <li><b>Rewarded Video:</b> Optional videos for hints — zero frustration model.</li>
+                <li><b>One-Time IAP:</b> A single "Master Key" via Google Play Billing removes all ads permanently.</li>
+            </ul>
+        </div>
+
+        <!-- SLIDE 6 -->
+        <div class="slide slide-text">
+            <h3>Why Feature Riddle Path Now?</h3>
+            <ul>
+                <li><b>Major Update Coming:</b> V2.0 adds new hand-crafted levels across 4 languages with new dynamic
+                    backgrounds.</li>
+                <li><b>Large Screen Showcase:</b> As Google Play pushes Tablets &amp; Foldables, Riddle Path delivers a
+                    flawless 10-inch experience.</li>
+                <li><b>Market Gap:</b> No other relaxing, riddle-based word puzzle combines poetry, art, and
+                    localization at this level.</li>
+            </ul>
+            <p class="closing">We would be honored to be considered for an "Editor's Choice" or "New &amp; Updated"
+                feature. Thank you.</p>
+        </div>
+
+    </div>
+
+    <div class="nav">
+        <button id="prev" onclick="changeSlide(-1)" disabled>&#8592; Prev</button>
+        <div class="dots" id="dots"></div>
+        <button id="next" onclick="changeSlide(1)">Next &#8594;</button>
+    </div>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const dotsEl = document.getElementById('dots');
+        let current = 0;
+
+        slides.forEach((_, i) => {
+            const d = document.createElement('div');
+            d.className = 'dot' + (i === 0 ? ' active' : '');
+            d.onclick = () => goTo(i);
+            dotsEl.appendChild(d);
+        });
+
+        function goTo(n) {
+            slides[current].classList.remove('active');
+            dotsEl.children[current].classList.remove('active');
+            current = n;
+            slides[current].classList.add('active');
+            dotsEl.children[current].classList.add('active');
+            document.getElementById('prev').disabled = current === 0;
+            document.getElementById('next').disabled = current === slides.length - 1;
+        }
+
+        function changeSlide(dir) { goTo(current + dir); }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowRight' && current < slides.length - 1) changeSlide(1);
+            if (e.key === 'ArrowLeft' && current > 0) changeSlide(-1);
+        });
+    </script>
+</body>
+
+</html>
