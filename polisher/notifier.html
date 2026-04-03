@@ -330,7 +330,7 @@
 
                 try {
                     const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`, {
-                        headers: { 'Authorization': `token ${token}` }
+                        headers: { 'Authorization': `Bearer ${token}` }
                     });
                     const data = await res.json();
 
@@ -375,7 +375,7 @@
 
                     const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`, {
                         method: 'PUT',
-                        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify(body)
                     });
 
@@ -498,7 +498,7 @@
 
                 try {
                     const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${CONTENT_MANIFEST_PATH}`, {
-                        headers: { 'Authorization': `token ${token}` }
+                        headers: { 'Authorization': `Bearer ${token}` }
                     });
 
                     if (res.ok) {
@@ -651,7 +651,7 @@
                 if (!token) return alert("GitHub Token is required to publish.");
 
                 // 1. Publish Notifications
-                await publishJSON();
+                await saveToGithub();
 
                 // 2. Publish Content Manager changes (if manifest is loaded)
                 if (contentManifest.backgrounds.length > 0 || contentManifest.music.length > 0 || deletedFiles.length > 0) {
@@ -671,7 +671,7 @@
                         setContentStatus(`Deleting ${del.name}...`);
                         try {
                             const existRes = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${del.path}`, {
-                                headers: { 'Authorization': `token ${token}` }
+                                headers: { 'Authorization': `Bearer ${token}` }
                             });
 
                             if (existRes.ok) {
@@ -682,7 +682,7 @@
                                 };
                                 const delRes = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${del.path}`, {
                                     method: 'DELETE',
-                                    headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                                     body: JSON.stringify(delBody)
                                 });
 
@@ -709,7 +709,7 @@
                         let fileSha = "";
                         try {
                             const existRes = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${upload.path}`, {
-                                headers: { 'Authorization': `token ${token}` }
+                                headers: { 'Authorization': `Bearer ${token}` }
                             });
                             if (existRes.ok) {
                                 const existData = await existRes.json();
@@ -725,7 +725,7 @@
 
                         const uploadRes = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${upload.path}`, {
                             method: 'PUT',
-                            headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify(uploadBody)
                         });
 
@@ -750,7 +750,7 @@
 
                     const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${CONTENT_MANIFEST_PATH}`, {
                         method: 'PUT',
-                        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify(manifestBody)
                     });
 
